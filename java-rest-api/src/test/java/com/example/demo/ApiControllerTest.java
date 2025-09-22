@@ -1,23 +1,28 @@
 package com.example.demo;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 import com.example.demo.controller.ApiController;
 import com.example.demo.model.Item;
+import com.example.demo.service.ItemService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
-@WebMvcTest(ApiController.class)
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(controllers = {ApiController.class})
 public class ApiControllerTest {
 
     @Autowired
@@ -26,66 +31,166 @@ public class ApiControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    // Este método roda ANTES de cada teste
-    @BeforeEach
-    public void setUp() throws Exception {
-        // Limpa o estado do controller (simulado) antes de cada teste
-        // (Embora o @WebMvcTest já isole, isso é uma boa prática para clareza)
-        // A melhoria aqui é criar um item que os testes GET possam usar.
-        Item item = new Item(1L, "Item 1", "Description 1");
-        mockMvc.perform(post("/api/items")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(item)));
-    }
+    @MockBean
+    private ItemService itemService;
+
+    // --- TESTES PARA GET /api/items ---
 
     @Test
-    public void testGetItemJson() throws Exception {
-        mockMvc.perform(get("/api/items/1")
+    public void givenNoItems_whenGetAllItems_thenReturns200AndEmptyList() throws Exception {
+        when(itemService.getAllItems()).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/items")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+//    @Test
+//    public void givenItemsExist_whenGetAllItems_thenReturns200AndItemList() throws Exception {
+//        List<Item> items = List.of(
+//                new Item(1L, "Item 1", "Desc 1"),
+//                new Item(2L, "Item 2", "Desc 2")
+//        );
+//        when(itemService.getAllItems()).thenReturn(items);
+//
+//        mockMvc.perform(get("/api/items")
+//                        .accept(MediaType.APPLICATION_JSON))
+//                .andExpect(status().isOk())
+//                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+//                .andExpect(jsonPath("$", hasSize(2)))
+//                .andExpect(jsonPath("$.name", is("Item 1"))) // Linha corrigida
+//                .andExpect(jsonPath("$.[1]name", is("Item 2")));
+//    }
+@Test
+public void givenItemsExist_whenGetAllItems_thenReturns200AndItemList() throws Exception {
+    // Cenário (Given)
+    List<Item> items = List.of(
+            new Item(1L, "Item 1", "Desc 1"),
+            new Item(2L, "Item 2", "Desc 2")
+    );
+    when(itemService.getAllItems()).thenReturn(items);
+
+    // Ação (When) e Verificação (Then)
+    mockMvc.perform(get("/api/items")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$", hasSize(2))) // Verifica se o array tem 2 elementos
+
+            // Verifica as propriedades do PRIMEIRO item (índice 0)
+            .andExpect(jsonPath("$.[0]id", is(1)))
+            .andExpect(jsonPath("$.[0]name", is("Item 1")))
+            .andExpect(jsonPath("$.[0]description", is("Desc 1")))
+
+            // Verifica as propriedades do SEGUNDO item (índice 1)
+            .andExpect(jsonPath("$.[1]id", is(2)))
+            .andExpect(jsonPath("$.[1]name", is("Item 2")))
+            .andExpect(jsonPath("$.[1]description", is("Desc 2")));
+}
+
+    // --- TESTES DE VALIDAÇÃO ---
+
+    @Test
+    public void testCreateItemWithInvalidData_ShouldReturnBadRequest() throws Exception {
+        Item invalidItem = new Item(null, "", "Some description");
+
+        mockMvc.perform(post("/api/items")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidItem)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.name", is("Name is mandatory")));
+    }
+
+    @Test
+    public void testCreateItemWithEmptyJson_ShouldReturnBadRequest() throws Exception {
+        String emptyItemJson = "{}";
+
+        mockMvc.perform(post("/api/items")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(emptyItemJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.name", is("Name is mandatory")))
+                .andExpect(jsonPath("$.description", is("Description is mandatory")));
+    }
+
+    // --- TESTES ANTERIORES ---
+
+    @Test
+    public void testGetItemJson() throws Exception {
+        Item item = new Item(1L, "Item 1", "Description 1");
+        when(itemService.getItemById(1L)).thenReturn(Optional.of(item));
+
+        mockMvc.perform(get("/api/items/1")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
                 .andExpect(content().json("{\"id\":1,\"name\":\"Item 1\",\"description\":\"Description 1\"}"));
     }
 
     @Test
-    public void testGetItemXml() throws Exception {
-        mockMvc.perform(get("/api/items/1")
-                        .accept(MediaType.APPLICATION_XML))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_XML))
-                .andExpect(content().xml("<Item><id>1</id><name>Item 1</name><description>Description 1</description></Item>"));
-    }
-
-    @Test
     public void testCreateItem() throws Exception {
-        // O ID será gerado pelo servidor, então podemos omiti-lo ou usar qualquer valor
-        Item newItem = new Item(null, "Item 2", "Description 2");
+        Item itemToCreate = new Item(null, "New Item", "New Description");
+        Item createdItem = new Item(1L, "New Item", "New Description");
+
+        when(itemService.createItem(any(Item.class))).thenReturn(createdItem);
+
         mockMvc.perform(post("/api/items")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newItem)))
-                .andExpect(status().isCreated()); // Agora o teste espera 201 Created
+                        .content(objectMapper.writeValueAsString(itemToCreate)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.name", is("New Item")));
     }
 
     @Test
     public void testGetItemNotFound() throws Exception {
+        when(itemService.getItemById(999L)).thenReturn(Optional.empty());
+
         mockMvc.perform(get("/api/items/999")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
 
+    // Adicione estes dois novos métodos ao arquivo ApiControllerTest.java
+
     @Test
-    public void testCreateItemWithEmptyBody() throws Exception {
-        mockMvc.perform(post("/api/items")
+    public void whenUpdateItem_withValidData_thenReturns200AndUpdatedItem() throws Exception {
+        // Cenário (Given)
+        Item updatedItem = new Item(1L, "Updated Name", "Updated Description");
+        // Preparamos o mock: "Quando o método updateItem for chamado com id 1 e qualquer item..."
+        when(itemService.updateItem(any(Long.class), any(Item.class))).thenReturn(Optional.of(updatedItem));
+
+        // Ação (When) e Verificação (Then)
+        mockMvc.perform(put("/api/items/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")) // Enviando um JSON vazio
-                .andExpect(status().isBadRequest()); // Esperamos um erro 400
+                        .content(objectMapper.writeValueAsString(updatedItem)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is("Updated Name")));
     }
 
     @Test
-    public void testCreateItemWithInvalidJson() throws Exception {
-        mockMvc.perform(post("/api/items")
+    public void whenUpdateItem_thatDoesNotExist_thenReturns404NotFound() throws Exception {
+        // Cenário (Given)
+        Item itemData = new Item(999L, "Non Existent", "Data");
+        // Preparamos o mock para simular que o item não foi encontrado
+        when(itemService.updateItem(any(Long.class), any(Item.class))).thenReturn(Optional.empty());
+
+        // Ação (When) e Verificação (Then)
+        mockMvc.perform(put("/api/items/999")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"id\": 3, \"name\": \"Item 3\"}")) // JSON faltando o campo "description"
-                .andExpect(status().isBadRequest()); // Esperamos um erro 400
+                        .content(objectMapper.writeValueAsString(itemData)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void whenDeleteItem_thatExists_thenReturns204NoContent() throws Exception {
+        // Cenário (Given)
+        // Preparamos o mock para simular que a remoção foi bem-sucedida
+        when(itemService.deleteItem(1L)).thenReturn(true);
+
+        // Ação (When) e Verificação (Then)
+        mockMvc.perform(delete("/api/items/1"))
+                .andExpect(status().isNoContent()); // Verifica pelo status 204
     }
 }

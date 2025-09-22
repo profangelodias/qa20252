@@ -86,8 +86,13 @@ Isso executará os testes definidos em `ApiControllerTest.java`, os quais verifi
 
 ## Testes unitários
 
-Cenário de Teste
+Cenários de Testes de exceção
 Corpo da Requisição Vazio - Verificar como a API reage a um POST sem dados. - Um erro de "Bad Request" (Status 400).
 Corpo da Requisição com JSON Inválido - Verificar o comportamento com um JSON malformado. - Um erro de "Bad Request" (Status 400).
+
+Cenários de Testes "mundo real"
+Buscar todos os itens quando a lista está vazia - Garante que a API retorne uma resposta graciosa (uma lista vazia ``) em vez de um erro ou null quando não há dados.
+Buscar todos os itens quando existem dados - Valida o "caminho feliz" para a listagem, verificando a estrutura do array JSON e o número de itens.
+Verificar a estrutura completa da resposta de erro - Além de checar o status `400 Bad Request`, vamos garantir que o corpo do erro contenha as mensagens de validação corretas para os campos específicos.
 
 
