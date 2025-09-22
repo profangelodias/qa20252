@@ -15,6 +15,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+
 @WebMvcTest(ApiController.class)
 public class ApiControllerTest {
 
@@ -69,5 +71,21 @@ public class ApiControllerTest {
         mockMvc.perform(get("/api/items/999")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void testCreateItemWithEmptyBody() throws Exception {
+        mockMvc.perform(post("/api/items")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")) // Enviando um JSON vazio
+                .andExpect(status().isBadRequest()); // Esperamos um erro 400
+    }
+
+    @Test
+    public void testCreateItemWithInvalidJson() throws Exception {
+        mockMvc.perform(post("/api/items")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\": 3, \"name\": \"Item 3\"}")) // JSON faltando o campo "description"
+                .andExpect(status().isBadRequest()); // Esperamos um erro 400
     }
 }

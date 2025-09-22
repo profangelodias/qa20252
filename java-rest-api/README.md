@@ -84,8 +84,10 @@ mvn test
 
 Isso executará os testes definidos em `ApiControllerTest.java`, os quais verificam as respostas corretas em JSON e XML, além de validar os códigos de status HTTP.
 
-## Documentação completa dos testes unitários
+## Testes unitários
 
-Focar em testes é o que diferencia um código que "funciona agora" de um código robusto e confiável a longo prazo. É uma das habilidades mais importantes para um desenvolvedor.
+Cenário de Teste
+Corpo da Requisição Vazio - Verificar como a API reage a um POST sem dados. - Um erro de "Bad Request" (Status 400).
+Corpo da Requisição com JSON Inválido - Verificar o comportamento com um JSON malformado. - Um erro de "Bad Request" (Status 400).
 
 
