@@ -13,6 +13,7 @@ public class ItemService {
 
     private List<Item> items = new ArrayList<>();
     private final AtomicLong counter = new AtomicLong();
+    private Long currentId = 1L;
 
 
     public List<Item> getAllItems() {
@@ -26,7 +27,21 @@ public class ItemService {
     }
 
     public Item createItem(Item item) {
-        item.setId(counter.incrementAndGet());
+        if (item == null) {
+            throw new IllegalArgumentException("Item não pode ser nulo");
+        }
+
+        if (item.getName() == null || item.getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Nome não pode ser vazio");
+        }
+
+        if (item.getDescription() == null || item.getDescription().trim().isEmpty()) {
+            throw new IllegalArgumentException("Descrição não pode ser vazia");
+        }
+
+        // ✅ AQUI ESTÁ A CORREÇÃO PRINCIPAL
+        item.setId(currentId++);
+
         items.add(item);
         return item;
     }
@@ -49,8 +64,10 @@ public class ItemService {
     }
 
     public Item findById(Long id) {
+        if (id == null) return null;
+
         return items.stream()
-                .filter(item -> item.getId().equals(id))
+                .filter(item -> item.getId() != null && item.getId().equals(id))
                 .findFirst()
                 .orElse(null);
     }
