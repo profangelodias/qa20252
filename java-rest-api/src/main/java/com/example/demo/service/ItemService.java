@@ -48,5 +48,40 @@ public class ItemService {
         return false;
     }
 
+    public Item findById(Long id) {
+        return items.stream()
+                .filter(item -> item.getId().equals(id))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public List<Item> searchByName(String name) {
+
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Nome não pode ser vazio");
+        }
+
+        return items.stream()
+                .filter(item -> item.getName() != null &&
+                        item.getName().toLowerCase().contains(name.toLowerCase()))
+                .toList();
+    }
+
+    public Item updateStatus(Long id, boolean active) {
+
+        if (id == null) {
+            throw new IllegalArgumentException("ID não pode ser nulo");
+        }
+
+        Item item = findById(id);
+
+        if (item == null) {
+            throw new RuntimeException("Item não encontrado");
+        }
+
+        item.setActive(active);
+        return item;
+    }
+
 
 }
