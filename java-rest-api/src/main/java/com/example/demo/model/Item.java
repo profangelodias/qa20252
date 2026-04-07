@@ -5,6 +5,8 @@ import javax.validation.constraints.NotBlank; // Importar a anotação
 public class Item {
     private Long id;
 
+    private boolean active;
+
     @NotBlank(message = "Name is mandatory") // Não pode ser nulo ou conter apenas espaços em branco
     private String name;
 
@@ -43,5 +45,13 @@ public class Item {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }
