@@ -94,4 +94,65 @@ public class ItemServiceTest {
         assertTrue(wasDeleted, "O método deveria retornar true para uma remoção bem-sucedida");
         assertFalse(itemService.getItemById(id).isPresent(), "O item não deveria mais ser encontrado após a remoção");
     }
+
+    @Test
+    void deveBuscarItemPorNome() {
+        Item item = new Item(1L, "Notebook", "Dell");
+        itemService.createItem(item);
+
+        List<Item> resultado = itemService.searchByName("Note");
+
+        assertFalse(resultado.isEmpty());
+    }
+
+    @Test
+    void deveAtualizarStatus() {
+        Item item = new Item(1L, "Mouse", "Logitech");
+        itemService.createItem(item);
+
+        Item atualizado = itemService.updateStatus(1L, true);
+
+        assertTrue(atualizado.isActive());
+    }
+
+    @Test
+    void naoDeveBuscarComNomeVazio() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            itemService.searchByName("");
+        });
+    }
+
+    @Test
+    void naoDeveAtualizarComIdNulo() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            itemService.updateStatus(null, true);
+        });
+    }
+
+    @Test
+    void naoDeveAtualizarItemInexistente() {
+        assertThrows(RuntimeException.class, () -> {
+            itemService.updateStatus(999L, true);
+        });
+    }
+
+    @Test
+    void naoDeveCriarItemSemNome() {
+        Item item = new Item(1L, "", "desc");
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            itemService.createItem(item);
+        });
+    }
+
+    @Test
+    void naoDeveCriarItemSemDescricao() {
+        Item item = new Item(1L, "Teclado", "");
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            itemService.createItem(item);
+        });
+    }
+
+
 }
