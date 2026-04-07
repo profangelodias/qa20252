@@ -55,5 +55,15 @@ public class ApiController {
         }
     }
 
+    @GetMapping("/items/search")
+    public List<Item> searchItemsByName(@RequestParam String name) {
+        return itemService.searchByName(name);
+    }
+
+    @PatchMapping("/items/{id}/status")
+    public Item updateStatus(@PathVariable Long id, @RequestParam boolean active) {
+        return itemService.updateStatus(id, active);
+    }
+
 
 }
