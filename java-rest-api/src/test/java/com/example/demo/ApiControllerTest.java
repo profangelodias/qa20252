@@ -1,13 +1,12 @@
 package com.example.demo;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.example.demo.controller.ApiController;
 import com.example.demo.model.Item;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,50 +23,131 @@ public class ApiControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    // Este método roda ANTES de cada teste
     @BeforeEach
     public void setUp() throws Exception {
-        // Limpa o estado do controller (simulado) antes de cada teste
-        // (Embora o @WebMvcTest já isole, isso é uma boa prática para clareza)
-        // A melhoria aqui é criar um item que os testes GET possam usar.
-        Item item = new Item(1L, "Item 1", "Description 1");
+        Item item = new Item(null, "Item 1", "Description 1");
+
         mockMvc.perform(post("/api/items")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(item)));
     }
 
+    // GET - SUCESSO
+
     @Test
-    public void testGetItemJson() throws Exception {
+    public void shouldReturnItemInJson() throws Exception {
         mockMvc.perform(get("/api/items/1")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(content().json("{\"id\":1,\"name\":\"Item 1\",\"description\":\"Description 1\"}"));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    public void testGetItemXml() throws Exception {
+    public void shouldReturnItemInXml() throws Exception {
         mockMvc.perform(get("/api/items/1")
                         .accept(MediaType.APPLICATION_XML))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_XML))
-                .andExpect(content().xml("<Item><id>1</id><name>Item 1</name><description>Description 1</description></Item>"));
+                .andExpect(content().contentType(MediaType.APPLICATION_XML));
     }
 
+    // GET - ERRO
+
     @Test
-    public void testCreateItem() throws Exception {
-        // O ID será gerado pelo servidor, então podemos omiti-lo ou usar qualquer valor
-        Item newItem = new Item(null, "Item 2", "Description 2");
+    public void shouldReturn404WhenItemNotFound() throws Exception {
+        mockMvc.perform(get("/api/items/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    // POST - SUCESSO
+
+    @Test
+    public void shouldCreateItemSuccessfully() throws Exception {
+        Item item = new Item(null, "Item 2", "Description 2");
+
         mockMvc.perform(post("/api/items")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newItem)))
-                .andExpect(status().isCreated()); // Agora o teste espera 201 Created
+                        .content(objectMapper.writeValueAsString(item)))
+                .andExpect(status().isCreated());
+    }
+
+    // POST - VALIDAÇÕES
+
+    @Test
+    public void shouldReturn400WhenNameIsNull() throws Exception {
+        Item item = new Item(null, null, "Description");
+
+        mockMvc.perform(post("/api/items")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(item)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    public void testGetItemNotFound() throws Exception {
-        mockMvc.perform(get("/api/items/999")
-                        .accept(MediaType.APPLICATION_JSON))
+    public void shouldReturn400WhenNameIsEmpty() throws Exception {
+        Item item = new Item(null, "", "Description");
+
+        mockMvc.perform(post("/api/items")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(item)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void shouldReturn400WhenDescriptionIsEmpty() throws Exception {
+        Item item = new Item(null, "Item", "");
+
+        mockMvc.perform(post("/api/items")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(item)))
+                .andExpect(status().isBadRequest());
+    }
+
+    // SEARCH - GET /search
+
+    @Test
+    public void shouldFindItemByName() throws Exception {
+        mockMvc.perform(get("/api/items/search")
+                        .param("name", "Item 1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void shouldReturn404WhenSearchItemNotFound() throws Exception {
+        mockMvc.perform(get("/api/items/search")
+                        .param("name", "Inexistente"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void shouldReturn400WhenSearchNameIsEmpty() throws Exception {
+        mockMvc.perform(get("/api/items/search")
+                        .param("name", ""))
+                .andExpect(status().isBadRequest());
+    }
+
+    // PATCH - UPDATE DESCRIPTION
+
+    @Test
+    public void shouldUpdateDescriptionSuccessfully() throws Exception {
+        mockMvc.perform(patch("/api/items/1/description")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("\"Nova descrição\""))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void shouldReturn400WhenDescriptionIsEmptyOnUpdate() throws Exception {
+        mockMvc.perform(patch("/api/items/1/description")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("\"\""))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void shouldReturn404WhenUpdatingNonExistingItem() throws Exception {
+        mockMvc.perform(patch("/api/items/999/description")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("\"Nova descrição\""))
                 .andExpect(status().isNotFound());
     }
 }

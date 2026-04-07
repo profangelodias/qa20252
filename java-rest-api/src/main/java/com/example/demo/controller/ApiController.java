@@ -1,11 +1,3 @@
-package com.example.demo.controller;
-
-import com.example.demo.model.Item;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -23,11 +15,19 @@ public class ApiController {
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Item> createItem(@RequestBody Item item) {
-        // Atribui um novo ID para garantir que seja único
+    public ResponseEntity<?> createItem(@RequestBody Item item) {
+
+        if (item.getName() == null || item.getName().isEmpty()) {
+            return ResponseEntity.badRequest().body("Nome é obrigatório");
+        }
+
+        if (item.getDescription() == null || item.getDescription().isEmpty()) {
+            return ResponseEntity.badRequest().body("Descrição é obrigatória");
+        }
+
         item.setId(counter.incrementAndGet());
         items.add(item);
-        // Retorna o status 201 Created, que é a prática correta
+
         return new ResponseEntity<>(item, HttpStatus.CREATED);
     }
 
@@ -38,5 +38,38 @@ public class ApiController {
                 .findFirst()
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    // Endpoint 1: Buscar por nome
+    @GetMapping("/search")
+    public ResponseEntity<?> getByName(@RequestParam String name) {
+
+        if (name == null || name.isEmpty()) {
+            return ResponseEntity.badRequest().body("Nome é obrigatório");
+        }
+
+        return items.stream()
+                .filter(item -> name.equalsIgnoreCase(item.getName()))
+                .findFirst()
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Item não encontrado"));
+    }
+
+    // Endpoint 2: Atualizar descrição
+    @PatchMapping("/{id}/description")
+    public ResponseEntity<?> updateDescription(@PathVariable Long id, @RequestBody String description) {
+
+        if (description == null || description.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Descrição não pode ser vazia");
+        }
+
+        for (Item item : items) {
+            if (id.equals(item.getId())) {
+                item.setDescription(description);
+                return ResponseEntity.ok(item);
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Item não encontrado");
     }
 }
